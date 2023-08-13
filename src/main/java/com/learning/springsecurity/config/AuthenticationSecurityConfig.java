@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -14,10 +16,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import static com.learning.springsecurity.config.ApplicationUserRole.*;
-
+import static com.learning.springsecurity.config.ApplicationUserPermission.*;
 
 @Configuration
 @EnableWebSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class AuthenticationSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
@@ -32,10 +35,16 @@ public class AuthenticationSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(HttpSecurity http) throws Exception{
-        http.authorizeRequests()
+        http.
+                csrf().disable()
+                .authorizeRequests()
                 .antMatchers("/","/index/*","/css/*","/js/*")
                 .permitAll()
                 .antMatchers("/api/**").hasRole(STUDENT.name())
+//                .antMatchers(HttpMethod.POST,"/management/api/**").hasAuthority(COURSE_WRITE.getPermission())
+//                .antMatchers(HttpMethod.DELETE,"/management/api/**").hasAuthority(COURSE_WRITE.getPermission())
+//                .antMatchers(HttpMethod.PUT,"/management/api/**").hasAuthority(COURSE_WRITE.getPermission())
+//                .antMatchers(HttpMethod.GET,"/management/api/**").hasAnyRole(ADMIN.name(),ADMINTRAINEE.name())
                 .anyRequest()
                 .authenticated()
                 .and()
@@ -45,20 +54,25 @@ public class AuthenticationSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     @Bean
     protected UserDetailsService userDetailsService() {
-        logger.info(String.format("Role {}", STUDENT));
-        logger.info(String.format("Role {}", STUDENT.name()));
-        logger.info(String.format("Role {}", ADMIN));
-        logger.info(String.format("Role {}", ADMIN.name()));
+        logger.info(String.format("Role {}, %s", STUDENT));
+        logger.info(String.format("Role {}, %s", STUDENT.name()));
+        logger.info(String.format("Role {}, %s", ADMIN));
+        logger.info(String.format("Role {}, %s", ADMIN.name()));
        UserDetails user1 = User.builder()
                .username("manohar")
                .password(passwordEncoder.encode("password"))
-               .roles(STUDENT.name())
+               .authorities(STUDENT.getAuthorities())
                .build();
         UserDetails user2 = User.builder()
                 .username("manohar1")
                 .password(passwordEncoder.encode("password1"))
-                .roles(ADMIN.name())
+                .authorities(ADMIN.getAuthorities())
                 .build();
-       return new InMemoryUserDetailsManager(user1,user2);
+        UserDetails user3 = User.builder()
+                .username("manohar2")
+                .password(passwordEncoder.encode("password2"))
+                .authorities(ADMINTRAINEE.getAuthorities())
+                .build();
+       return new InMemoryUserDetailsManager(user1,user2,user3);
     }
 }
